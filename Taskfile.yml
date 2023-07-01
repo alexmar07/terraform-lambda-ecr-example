@@ -1,10 +1,49 @@
 version: '3'
 
+dotenv:
+  - ".env"
+
+vars:
+  ECR_ENDPOINT: $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+  TAG: latest
+
 tasks:
+
+  show-env:
+    cmds:
+      - echo $ACCOUNT_ID
+      - echo $AWS_REGION
+
+  terraform-init:
+    dir: ./iac
+    cmds:
+      - terraform init
 
   terraform:
     dir: ./iac
     cmds:
-      - terraform init
       - terraform fmt
       - terraform validate
+
+  terraform-plan:
+    dir: ./iac
+    cmds:
+      - terraform plan
+
+  terraform-apply:
+    dir: ./iac
+    cmds:
+      - terraform apply
+
+  terraform-destroy:
+    dir: ./iac
+    cmds:
+      - terraform destroy
+
+  build:
+    dir: ./code
+    cmds:
+      - docker build -t code .
+      - aws ecr get-login-password  --region $AWS_REGION | docker login --username AWS --password-stdin {{.ECR_ENDPOINT}}
+      - docker tag code:{{.TAG}} {{.ECR_ENDPOINT}}/code:{{.TAG}}
+      - docker push {{.ECR_ENDPOINT}}/code:{{.TAG}}
